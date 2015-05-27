@@ -4,26 +4,27 @@
 //
 //  Code from:
 //      Lars Soltmann
-//      EMLID (majority)
+//      EMLID
 //
 //  https://github.com/emlid/Navio
 //  http://www.emlid.com
 
 // Revision History
 // Rev A - 17 Jan 2015 - Created and debugged
-// Rev B - 30 Jan 2015 - Raw data only
+// Rev B - 30 Jan 2015 - Program split into different versions to cut out what is not needed for the current test
+//                     - This version records the raw data only and will require post processing after download
 // Rev C - 11 Feb 2015 - Added MS5805 code
-//		                 - Added heartbeat
-//		                 - General improvements and clean up
+//		       - Added heartbeat
+//		       - General improvements and clean up
 // Rev D - 13 Feb 2015 - Added check on magnetomer readings to make sure 'device opened error' is caught
 // Rev E - 17 Feb 2015 - Added 20Hz LPF to gyro and accel
 // Rev F - 24 Feb 2015 - Added AHRS code and thread
-// Rev G - 10 Mar 2015 - Hard iron calibration
-// Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer
-// Rev I - 04 Apr 2015 - GPS thread added, display ouput modified, change LED to reflect GPS status
+// Rev G - 10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard iron calibration
+// Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
+// Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
 // Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
 // Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS
-//                     - Libraries for MS4515 and MS5805 created
+// Rev L - 27 May 2015 - GPS switched to new library
 
 #include <stdio.h>
 #include <stdint.h>
@@ -36,16 +37,17 @@
 #include "/home/pi/Navio/C++/Navio/MS5611.h"
 #include "/home/pi/Navio/C++/Navio/ADS1115.h"
 #include "/home/pi/Navio/C++/Navio/MPU9250.h"
-#include "/home/pi/Navio/C++/Navio/Ublox.h"
+//#include "/home/pi/Navio/C++/Navio/Ublox.h"
 #include "/home/pi/Navio/C++/Navio/PCA9685.h"
 #include "/home/pi/Navio/C++/Examples/AHRS/AHRS.hpp"
 #include "/home/pi/Navio/C++/Navio/gpio.h"
 #include <wiringSerial.h>
 #include <wiringPi.h>
 #include <time.h>
-#include "/home/pi/Libraries/PID_lib/PID_lib.h"
-#include "/home/pi/Libraries/MS4515_lib/MS4515.h"
-#include "/home/pi/Libraries/MS5805_lib/MS5805.h"
+#include "/home/pi/Libraries/PID.h"
+#include "/home/pi/Libraries/MS4515.h"
+#include "/home/pi/Libraries/MS5805.h"
+#include "/home/pi/Libraries/UbloxGPS.h"
 
 using namespace Navio;
 using namespace std;
@@ -64,7 +66,6 @@ int ADC_active=0;
 int RPM_active=0;
 int IMU_active=1;
 
-// Thread priorities
 int gps_priority=45;
 int ppm_priority=30;
 int MS5611_priority=20;
@@ -72,6 +73,8 @@ int MS5805_priority=20;
 int ahrs_priority=33;
 
 int OUTPUT_TO_SCREEN=0;
+//pthread_mutex_t i2c_mutex=PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t spi_mutex=PTHREAD_MUTEX_INITIALIZER;
 // *!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!
 
 //================================ PPM Decoder and Servo Setup  =====================================
@@ -231,13 +234,25 @@ void * acquireBarometerData(void * barom)
     MS5611* barometer = (MS5611*)barom;
 
     while (true) {
-        barometer->refreshPressure();
-        usleep(10000); // Waiting for pressure data ready
-        barometer->readPressure();
+//        pthread_mutex_lock(&i2c_mutex);
+	barometer->refreshPressure();
+//  	pthread_mutex_unlock(&i2c_mutex);
 
+        usleep(10000); // Waiting for pressure data ready
+
+//	pthread_mutex_lock(&i2c_mutex);
+	barometer->readPressure();
+//	pthread_mutex_unlock(&i2c_mutex);
+
+//	pthread_mutex_lock(&i2c_mutex);
         barometer->refreshTemperature();
+//	pthread_mutex_unlock(&i2c_mutex);
+
         usleep(10000); // Waiting for temperature data ready
-        barometer->readTemperature();
+
+//        pthread_mutex_lock(&i2c_mutex);
+	barometer->readTemperature();
+//	pthread_mutex_unlock(&i2c_mutex);
 
         barometer->calculatePressureAndTemperature();
     }
@@ -247,8 +262,10 @@ void * acquireBarometerData(void * barom)
 void * MS5805_data(void *arg){
     ms5805.initialize();
     while(true){
+//	pthread_mutex_lock(&i2c_mutex);
         ms5805.read_pressure_temperature();
-        static_pressure=ms5805.getPressure();
+//        pthread_mutex_unlock(&i2c_mutex);
+	static_pressure=ms5805.getPressure();
     }
 }
 
@@ -273,17 +290,23 @@ int get_diff_press(int sensor_number){
     if (sensor_number == 1){
 	digitalWrite(S0, LOW);
   	digitalWrite(S1, LOW);
+//	pthread_mutex_lock(&i2c_mutex);
         count=ms4515.readPressure_raw();
+//	pthread_mutex_unlock(&i2c_mutex);
     }
     if (sensor_number == 2){
        	digitalWrite(S0, HIGH);
        	digitalWrite(S1, LOW);
+//	pthread_mutex_lock(&i2c_mutex);
 	count=ms4515.readPressure_raw();
+//	pthread_mutex_unlock(&i2c_mutex);
     }
     if (sensor_number == 3){
        	digitalWrite(S0, LOW);
        	digitalWrite(S1, HIGH);
+//	pthread_mutex_lock(&i2c_mutex);
        	count=ms4515.readPressure_raw();
+//	pthread_mutex_unlock(&i2c_mutex);
     }
     return count;
 }
@@ -302,7 +325,9 @@ void imuSetup()
 //	printf("Beginning Gyro calibration...\n");
 	for(int i = 0; i<100; i++)
 	{
+//		pthread_mutex_lock(&spi_mutex);
 		imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+//		pthread_mutex_unlock(&spi_mutex);
 		ahrs_offset[0] += (-gx*0.0175);
 		ahrs_offset[1] += (-gy*0.0175);
 		ahrs_offset[2] += (-gz*0.0175);
@@ -339,8 +364,9 @@ void imuLoop()
     // FIXME In order to use magnetometer it's orientation has to be fixed
     // according to MPU9250 datasheet. Also, soft and hard iron calibration
     // would be required.
-
+//     pthread_mutex_lock(&spi_mutex);
      imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+//     pthread_mutex_unlock(&spi_mutex);
 // Bench hard iron offsets
 //     mx-=17.0317;
 //     my-=25.7831;
@@ -386,36 +412,11 @@ void * AHRS_Thread(void *arg){
 
 // ============================== GPS Thread ==============================
 void * GPS_Thread(void *arg){
-if(gps.testConnection())
-{
-//	while(1){
-		gps.decodeMessages();
-
-
-
-
-/*		if (gps.decodeSingleMessage(Ublox::NAV_POSLLH, pos_data) == 1){
-	      		gps_lat=pos_data[2]/10000000;
-        	    	gps_lon=pos_data[1]/10000000;
-            		gps_h=(pos_data[3]/1000);
-        	}
-		if (gps.decodeSingleMessage(Ublox::NAV_VELNED, pos_data) == 1){
-            		gps_N=pos_data[1];
-            		gps_E=pos_data[2];
-            		gps_D=pos_data[3];
-            		gps_3D=pos_data[4];
-            		gps_2D=pos_data[5];
-            		gps_crs=pos_data[6]/100000;
-        	}
-		if (gps.decodeSingleMessage(Ublox::NAV_STATUS, pos_data) == 1){
-            		gps_stat=(int)pos_data[0];
-		}
-    	}*/
-}
-else {
-    printf("Ublox test not passed\n");
+    if (gps.initialize() != 0){
 	error_flag++;
-}
+	printf("GPS initialization error!\n");
+    }
+    gps.getMessages();
 }
 
 
@@ -485,6 +486,7 @@ int main(int argc, char **argv) {
     pwm.setPWM(BLUE, LEDMIN);
 
     // Create Threads ********************************************
+    //pthread_mutex_init(&_mutex);
     pthread_t PPMThread;
     pthread_t BaroThread;
     pthread_t MS5805Thread;
@@ -699,7 +701,9 @@ int main(int argc, char **argv) {
         }
         // READ IMU
 	if (IMU_active == 1 && AHRS_active == 0) {
+//		pthread_mutex_lock(&spi_mutex);
         	imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+//		pthread_mutex_unlock(&spi_mutex);
 	}
 
         // READ ADC
@@ -713,7 +717,7 @@ int main(int argc, char **argv) {
 //        mV3 = adc.getMilliVolts();
 
         // READ BAROMETER
-        if (MS5805_active==1) {
+        if (MS5611_active==1) {
             baroT=baro.getTemperature();
             baroP=baro.getPressure();
         }
