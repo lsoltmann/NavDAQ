@@ -1,30 +1,30 @@
-//
-//  NavDAQ.cpp
-//
-//
-//  Code from:
-//      Lars Soltmann
-//      EMLID
-//
-//  https://github.com/emlid/Navio
-//  http://www.emlid.com
+/*
+NavDAQ.cpp
 
-// Revision History
-// Rev A - 17 Jan 2015 - Created and debugged
-// Rev B - 30 Jan 2015 - Program split into different versions to cut out what is not needed for the current test
-//                     - This version records the raw data only and will require post processing after download
-// Rev C - 11 Feb 2015 - Added MS5805 code
-//		       - Added heartbeat
-//		       - General improvements and clean up
-// Rev D - 13 Feb 2015 - Added check on magnetomer readings to make sure 'device opened error' is caught
-// Rev E - 17 Feb 2015 - Added 20Hz LPF to gyro and accel
-// Rev F - 24 Feb 2015 - Added AHRS code and thread
-// Rev G - 10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard iron calibration
-// Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
-// Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
-// Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
-// Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS
-// Rev L - 27 May 2015 - GPS switched to new library
+Code from:
+	Lars Soltmann
+      		https://github.com/lsoltmann/NavDAQ
+	EMLID
+		https://github.com/emlid/Navio
+		http://www.emlid.com
+
+Revision History
+Rev A - 17 Jan 2015 - Created and debugged
+Rev B - 30 Jan 2015 - Program split into different versions to cut out what is not needed for the current test
+                     - This version records the raw data only and will require post processing after download
+Rev C - 11 Feb 2015 - Added MS5805 code
+		       - Added heartbeat
+		       - General improvements and clean up
+Rev D - 13 Feb 2015 - Added check on magnetomer readings to make sure 'device opened error' is caught
+Rev E - 17 Feb 2015 - Added 20Hz LPF to gyro and accel
+Rev F - 24 Feb 2015 - Added AHRS code and thread
+Rev G - 10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard iron calibration
+Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
+Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
+Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
+Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS
+Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -157,20 +157,6 @@ int rpm=0;
 int hbcount=0;
 int hboffcount;
 int hboncount;
-
-// GPS variables
-//std::vector<double> pos_data;
-/*double gps_lat=0;
-double gps_lon=0;
-float gps_h=0;
-float gps_N=0;
-float gps_E=0;
-float gps_D=0;
-float gps_3D=0;
-float gps_2D=0;
-float gps_crs=0;
-int gps_stat=0;*/
-
 
 //AHRS Timing Data
 float ahrs_offset[3];
@@ -641,8 +627,8 @@ int main(int argc, char **argv) {
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 RPM PPM GPS ADC\n");
     fprintf(logf,"%d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
-    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPSAlt GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
-    fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,m,cm/s,cm/s,cm/s,cm/s,cm/s,deg,none\n");
+    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShAGL GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
+    fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none\n");
 
     // Sometimes a "Device not opened" error occurs and the magnetometer is reading zero
     // Check to see if magnetometer is reading zero and set errorflag
@@ -761,7 +747,7 @@ int main(int argc, char **argv) {
                 gearflag=1;
             }
             pwm.setPWM(BLUE, LEDLOW);
-            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_h, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat);
+            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_h, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat);
             fflush(logf);
         }
         else{
@@ -788,7 +774,7 @@ int main(int argc, char **argv) {
             printf("GPS NV, EV, DV (ft/s): %.2f %.2f %.2f\n",gps.gps_N,gps.gps_E,gps.gps_D);
             printf("GPS speed 2D 3D (ft/s): %.2f %.2f\n",gps.gps_2D,gps.gps_3D);
             printf("GPS course (deg): %.2f\n",gps.gps_crs);
-            printf("GPS height (ft): %.2f\n",gps.gps_h);
+            printf("GPS height AGL MSL (ft): %.2f %.2f\n",gps.gps_h,gps.gps_hmsl);
             printf("GPS status: %d\n",gps.gps_stat);
             printf("THR: %4.f AIL: %4.f ELEV: %4.f RUD: %4.f\n",throttle, aileron, elevator, rudder);
             printf("Alpha count: %d\n",alfa_press);
