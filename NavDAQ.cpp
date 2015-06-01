@@ -22,7 +22,7 @@ Rev G - 10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard i
 Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
 Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
 Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
-Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS
+Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
 Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
 */
 
@@ -48,6 +48,7 @@ Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS l
 #include "/home/pi/Libraries/MS4515.h"
 #include "/home/pi/Libraries/MS5805.h"
 #include "/home/pi/Libraries/UbloxGPS.h"
+#include "/home/pi/Libraries/SSC005D.h"
 
 using namespace Navio;
 using namespace std;
@@ -62,6 +63,7 @@ int PPMdecode_active=1;
 int AHRS_active=1;
 int GPS_active=1;
 int MS4515_active=1;
+int SSC005D_active=1;
 int ADC_active=0;
 int RPM_active=0;
 int IMU_active=1;
@@ -94,6 +96,7 @@ ADS1115 adc;
 AHRS ahrs;
 Ublox gps;
 PCA9685 pwm;
+HWSSC arspd;
 
 //============================ Variable Setup  ==================================
 // PPM variables
@@ -277,7 +280,7 @@ int get_diff_press(int sensor_number){
 	digitalWrite(S0, LOW);
   	digitalWrite(S1, LOW);
 //	pthread_mutex_lock(&i2c_mutex);
-        count=ms4515.readPressure_raw();
+        count=arspd.readPressure_raw();
 //	pthread_mutex_unlock(&i2c_mutex);
     }
     if (sensor_number == 2){
@@ -625,8 +628,8 @@ int main(int argc, char **argv) {
     fprintf(logf,"*** This log file contains raw data! ***\n\n");
     fprintf(logf,"%s\n\n",filedate);
     fprintf(logf,"Devices Active:\n");
-    fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 RPM PPM GPS ADC\n");
-    fprintf(logf,"%d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
+    fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
+    fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
     fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShAGL GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
     fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none\n");
 
@@ -724,8 +727,10 @@ int main(int argc, char **argv) {
 	}
 
         // READ ALPHA, BETA, VELOCITY
-	if (MS4515_active == 1) {
+	if (SSC005D_active == 1) {
         	V_press=get_diff_press(VEL);
+	}
+        if (MS4515_active == 1) {
         	alfa_press=get_diff_press(ALFA);
         	beta_press=get_diff_press(BETA);
 	}
@@ -747,7 +752,7 @@ int main(int argc, char **argv) {
                 gearflag=1;
             }
             pwm.setPWM(BLUE, LEDLOW);
-            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_h, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat);
+            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat);
             fflush(logf);
         }
         else{
@@ -828,27 +833,27 @@ int main(int argc, char **argv) {
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
-    pwm.setPWM(GREEN, LEDMAX);
+    pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
-    pwm.setPWM(GREEN, LEDMIN);
+    pwm.setPWM(BLUE, LEDMIN);
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
-    pwm.setPWM(GREEN, LEDMAX);
+    pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
-    pwm.setPWM(GREEN, LEDMIN);
+    pwm.setPWM(BLUE, LEDMIN);
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
-    pwm.setPWM(GREEN, LEDMAX);
+    pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
-    pwm.setPWM(GREEN, LEDMIN);
+    pwm.setPWM(BLUE, LEDMIN);
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
-    pwm.setPWM(GREEN, LEDMAX);
+    pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
-    pwm.setPWM(GREEN, LEDMIN);
+    pwm.setPWM(BLUE, LEDMIN);
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
