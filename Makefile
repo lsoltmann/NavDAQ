@@ -17,6 +17,8 @@ all:
 	$(LIBS)/UbloxGPS.cpp \
 	$(LIBS)/MS5805.cpp \
 	$(LIBS)/MS4515.cpp \
+	$(LIBS)/PID.cpp \
+	$(LIBS)/SSC005D.cpp \
         $(NAVIO)/I2Cdev.cpp -o NavDAQ -lrt -pthread -lpigpio -lwiringPi
 
 clean:
