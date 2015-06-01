@@ -65,7 +65,7 @@ int GPS_active=1;
 int MS4515_active=1;
 int SSC005D_active=1;
 int ADC_active=0;
-int RPM_active=0;
+int RPM_active=1;
 int IMU_active=1;
 
 int gps_priority=45;
@@ -630,7 +630,7 @@ int main(int argc, char **argv) {
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
     fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
-    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShAGL GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
+    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
     fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none\n");
 
     // Sometimes a "Device not opened" error occurs and the magnetometer is reading zero
