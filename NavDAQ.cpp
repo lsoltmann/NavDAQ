@@ -630,8 +630,8 @@ int main(int argc, char **argv) {
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
     fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
-    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat\n");
-    fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none\n");
+    fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Roll Pitch Yaw BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat GPSnSat GPSPDOP GPSAltAcc GPSVelAcc\n");
+    fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none,none,ft,ft/s\n");
 
     // Sometimes a "Device not opened" error occurs and the magnetometer is reading zero
     // Check to see if magnetometer is reading zero and set errorflag
@@ -752,7 +752,7 @@ int main(int argc, char **argv) {
                 gearflag=1;
             }
             pwm.setPWM(BLUE, LEDLOW);
-            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat);
+            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
             fflush(logf);
         }
         else{
@@ -780,7 +780,8 @@ int main(int argc, char **argv) {
             printf("GPS speed 2D 3D (ft/s): %.2f %.2f\n",gps.gps_2D,gps.gps_3D);
             printf("GPS course (deg): %.2f\n",gps.gps_crs);
             printf("GPS height AGL MSL (ft): %.2f %.2f\n",gps.gps_h,gps.gps_hmsl);
-            printf("GPS status: %d\n",gps.gps_stat);
+            printf("GPS status, nSat: %d %d\n",gps.gps_stat,gps.gps_nsat);
+            printf("GPS PDOP, altAcc, velAcc: %.2f %.2f %.2f\n",gps.gps_pdop,gps.gps_altacc,gps.gps_velacc);
             printf("THR: %4.f AIL: %4.f ELEV: %4.f RUD: %4.f\n",throttle, aileron, elevator, rudder);
             printf("Alpha count: %d\n",alfa_press);
             printf("Beta count: %d\n",beta_press);
