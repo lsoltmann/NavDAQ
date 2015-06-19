@@ -24,6 +24,7 @@ Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modif
 Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
 Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
 Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
+Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
 */
 
 #include <stdio.h>
@@ -53,7 +54,7 @@ Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS l
 using namespace Navio;
 using namespace std;
 
-
+/*
 // *!*!*!*!*!*!*!*!*!*! System and Data Options *!*!*!*!*!*!*!*!*!*!*!
 int dataSampleRate=25; // Hertz
 
@@ -78,7 +79,7 @@ int OUTPUT_TO_SCREEN=0;
 //pthread_mutex_t i2c_mutex=PTHREAD_MUTEX_INITIALIZER;
 //pthread_mutex_t spi_mutex=PTHREAD_MUTEX_INITIALIZER;
 // *!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!
-
+*/
 //================================ PPM Decoder and Servo Setup  =====================================
 unsigned int samplingRate      = 5;      // 1 microsecond (can be 1,2,4,5,10)
 unsigned int ppmInputGpio      = 4;      // PPM input on Navio's 2.54 header
@@ -97,6 +98,7 @@ AHRS ahrs;
 Ublox gps;
 PCA9685 pwm;
 HWSSC arspd;
+readConfig configs;
 
 //============================ Variable Setup  ==================================
 // PPM variables
@@ -416,6 +418,12 @@ int main(int argc, char **argv) {
     memset(&sp, 0, sizeof(sp));
     sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
     sched_setscheduler(0, SCHED_FIFO, &sp);
+    
+    // Read configuration file data
+    if(configs.readfile() != 0){
+    	error_flag++;
+    	printf("Config file read error!\n");
+    };
 
     dataSampleRate_t=1.0/(double)dataSampleRate;
 
