@@ -50,6 +50,7 @@ Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added
 #include "/home/pi/Libraries/MS5805.h"
 #include "/home/pi/Libraries/UbloxGPS.h"
 #include "/home/pi/Libraries/SSC005D.h"
+#include "/home/pi/Libraries/readConfig.h"
 
 using namespace Navio;
 using namespace std;
@@ -226,26 +227,12 @@ void * acquireBarometerData(void * barom)
     MS5611* barometer = (MS5611*)barom;
 
     while (true) {
-//        pthread_mutex_lock(&i2c_mutex);
 	barometer->refreshPressure();
-//  	pthread_mutex_unlock(&i2c_mutex);
-
         usleep(10000); // Waiting for pressure data ready
-
-//	pthread_mutex_lock(&i2c_mutex);
 	barometer->readPressure();
-//	pthread_mutex_unlock(&i2c_mutex);
-
-//	pthread_mutex_lock(&i2c_mutex);
         barometer->refreshTemperature();
-//	pthread_mutex_unlock(&i2c_mutex);
-
         usleep(10000); // Waiting for temperature data ready
-
-//        pthread_mutex_lock(&i2c_mutex);
 	barometer->readTemperature();
-//	pthread_mutex_unlock(&i2c_mutex);
-
         barometer->calculatePressureAndTemperature();
     }
 }
@@ -254,9 +241,7 @@ void * acquireBarometerData(void * barom)
 void * MS5805_data(void *arg){
     ms5805.initialize();
     while(true){
-//	pthread_mutex_lock(&i2c_mutex);
         ms5805.read_pressure_temperature();
-//        pthread_mutex_unlock(&i2c_mutex);
 	static_pressure=ms5805.getPressure();
     }
 }
@@ -282,23 +267,17 @@ int get_diff_press(int sensor_number){
     if (sensor_number == 1){
 	digitalWrite(S0, LOW);
   	digitalWrite(S1, LOW);
-//	pthread_mutex_lock(&i2c_mutex);
         count=arspd.readPressure_raw();
-//	pthread_mutex_unlock(&i2c_mutex);
     }
     if (sensor_number == 2){
        	digitalWrite(S0, HIGH);
        	digitalWrite(S1, LOW);
-//	pthread_mutex_lock(&i2c_mutex);
 	count=ms4515.readPressure_raw();
-//	pthread_mutex_unlock(&i2c_mutex);
     }
     if (sensor_number == 3){
        	digitalWrite(S0, LOW);
        	digitalWrite(S1, HIGH);
-//	pthread_mutex_lock(&i2c_mutex);
        	count=ms4515.readPressure_raw();
-//	pthread_mutex_unlock(&i2c_mutex);
     }
     return count;
 }
@@ -308,18 +287,10 @@ int get_diff_press(int sensor_number){
 
 void imuSetup()
 {
-    //----------------------- MPU initialization ------------------------------
-
-    imu.initialize();
-
-    //-------------------------------------------------------------------------
-
-//	printf("Beginning Gyro calibration...\n");
+    	imu.initialize();
 	for(int i = 0; i<100; i++)
 	{
-//		pthread_mutex_lock(&spi_mutex);
 		imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-//		pthread_mutex_unlock(&spi_mutex);
 		ahrs_offset[0] += (-gx*0.0175);
 		ahrs_offset[1] += (-gy*0.0175);
 		ahrs_offset[2] += (-gz*0.0175);
@@ -328,8 +299,6 @@ void imuSetup()
 	ahrs_offset[0]/=100.0;
 	ahrs_offset[1]/=100.0;
 	ahrs_offset[2]/=100.0;
-
-//	printf("Offsets are: %f %f %f\n", offset[0], offset[1], offset[2]);
 	ahrs.setGyroOffset(ahrs_offset[0], ahrs_offset[1], ahrs_offset[2]);
 }
 
@@ -337,8 +306,6 @@ void imuSetup()
 
 void imuLoop()
 {
-    //----------------------- Calculate delta time ----------------------------
-
 	gettimeofday(&ahrs_tv,NULL);
 	previoustime = currenttime;
 	currenttime = 1000000 * ahrs_tv.tv_sec + ahrs_tv.tv_usec;
@@ -348,48 +315,30 @@ void imuLoop()
         currenttime = 1000000 * ahrs_tv.tv_sec + ahrs_tv.tv_usec;
 	ahrs_dt = (currenttime - previoustime) / 1000000.0;
 
-    //-------- Read raw measurements from the MPU and update AHRS --------------
-
-//    imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-//    ahrs.updateIMU(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, dt);
-
-    // FIXME In order to use magnetometer it's orientation has to be fixed
-    // according to MPU9250 datasheet. Also, soft and hard iron calibration
-    // would be required.
-//     pthread_mutex_lock(&spi_mutex);
-     imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-//     pthread_mutex_unlock(&spi_mutex);
+	imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 // Bench hard iron offsets - RPiB + NAVIO
 //     mx-=17.0317;
 //     my-=25.7831;
 //     mz+=12.5051;
 
 // Installed hard iron offsets - RPiB + NAVIO
-     mx-=17.9105;
-     my-=27.4368;
-     mz+=19.0404;
-     ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, ahrs_dt);
+     	mx-=17.9105;
+     	my-=27.4368;
+     	mz+=19.0404;
+     	ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, ahrs_dt);
+	ahrs.getEuler(&roll, &pitch, &yaw);
 
-    //------------------------ Read Euler angles ------------------------------
-
-    ahrs.getEuler(&roll, &pitch, &yaw);
-
-    //------------------- Discard the time of the first cycle -----------------
-
-    if (!isFirst)
-    {
-    	if (ahrs_dt > maxdt) maxdt = ahrs_dt;
-    	if (ahrs_dt < mindt) mindt = ahrs_dt;
-    }
-    isFirst = 0;
-
-    //------------- Console and network output with a lowered rate ------------
-
-    dtsumm += ahrs_dt;
-    if(dtsumm > 0.05)
-    {
-        dtsumm = 0;
-    }
+	if (!isFirst)
+    	{
+    		if (ahrs_dt > maxdt) maxdt = ahrs_dt;
+    		if (ahrs_dt < mindt) mindt = ahrs_dt;
+	}
+    	isFirst = 0;
+    	dtsumm += ahrs_dt;
+    	if(dtsumm > 0.05)
+    	{
+        	dtsumm = 0;
+    	}
 }
 
 // =============================== AHRS Thread ===============================
@@ -498,7 +447,6 @@ int main(int argc, char **argv) {
     pwm.setPWM(BLUE, LEDMIN);
 
     // Create Threads ********************************************
-    //pthread_mutex_init(&_mutex);
     pthread_t PPMThread;
     pthread_t BaroThread;
     pthread_t MS5805Thread;
@@ -635,7 +583,7 @@ int main(int argc, char **argv) {
         }
     }
 */
-    //Set logfile **************************************************
+    //Generate logfile **************************************************
     FILE *logf;
     current_time=time(NULL);
     struct tm *t=localtime(&current_time);
@@ -717,20 +665,20 @@ int main(int argc, char **argv) {
         }
         // READ IMU
 	if (IMU_active == 1 && AHRS_active == 0) {
-//		pthread_mutex_lock(&spi_mutex);
         	imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-//		pthread_mutex_unlock(&spi_mutex);
 	}
 
         // READ ADC
-//        adc.setMultiplexer(ADS1115_MUX_P0_NG);
-//        mV0 = adc.getMilliVolts();
-//        adc.setMultiplexer(ADS1115_MUX_P1_NG);
-//        mV1 = adc.getMilliVolts();
-//        adc.setMultiplexer(ADS1115_MUX_P2_NG);
-//        mV2 = adc.getMilliVolts();
-//        adc.setMultiplexer(ADS1115_MUX_P3_NG);
-//        mV3 = adc.getMilliVolts();
+        if (ADC_active == 1) {
+        adc.setMultiplexer(ADS1115_MUX_P0_NG);
+        mV0 = adc.getMilliVolts();
+        adc.setMultiplexer(ADS1115_MUX_P1_NG);
+        mV1 = adc.getMilliVolts();
+        adc.setMultiplexer(ADS1115_MUX_P2_NG);
+        mV2 = adc.getMilliVolts();
+        adc.setMultiplexer(ADS1115_MUX_P3_NG);
+        mV3 = adc.getMilliVolts();
+        }
 
         // READ BAROMETER
         if (MS5611_active==1) {
@@ -879,11 +827,11 @@ int main(int argc, char **argv) {
     }
 
     // Close devices and log file
+    printf("Exiting ...\n");
     fclose(logf);
     serialClose(fd);
     pwm.setPWM(GREEN, LEDMIN);
     pwm.setPWM(BLUE, LEDMIN);
-    printf("Exiting ...\n");
     pwm.setPWM(RED, LEDMAX);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
