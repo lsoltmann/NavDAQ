@@ -426,9 +426,18 @@ int main(int argc, char **argv) {
     };
     // Echo config file to screen
     printf("Sampling Frequency: %d\n",dataSampleRate);
+    printf("System Orientation: %d\n",sys_orientation);
     printf("Devices Active: %d %d %d %d %d %d %d %d %d %d\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
     printf("Thread Priorities: %d %d %d %d %d\n",gps_priority,ppm_priority,MS5611_priority,MS5805_priority,ahrs_priority);
     printf("Output to Screen: %d\n\n",OUTPUT_TO_SCREEN);
+    
+    if (dataSampleRate>100){
+    	printf("WARNING! Data sample rate is high!\n\n")
+    }
+    if (sys_orientation != 1 || sys_orientation != 2 || sys_orientation != 3 || sys_orientation != 4){
+    	printf("System orientation value not valid! Must be either 1,2,3,4\n\n")
+    	error_flag++;
+    }
 
     dataSampleRate_t=1.0/(double)dataSampleRate;
 
@@ -642,6 +651,8 @@ int main(int argc, char **argv) {
     fprintf(logf,"%s\n\n",filedate);
     fprintf(logf,"Sampling Frequency:\n");
     fprintf(logf,"%d\n\n",dataSampleRate);
+    fprintf(logf,"System Orientation:\n");
+    fprintf(logf,"%d\n\n",sys_orientation);
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
     fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
@@ -767,7 +778,18 @@ int main(int argc, char **argv) {
                 gearflag=1;
             }
             pwm.setPWM(BLUE, LEDLOW);
-            fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
+            if(sys_orientation==1){
+            	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
+            }
+            else if(sys_orientation==2){
+            	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
+            }
+            else if(sys_orientation==3){
+            	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
+            }
+            else if(sys_orientation==4){
+            	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, ay, az, gx, gy, gz, mx, my, mz, roll, pitch, yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
+            }
             fflush(logf);
         }
         else{
