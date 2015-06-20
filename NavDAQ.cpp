@@ -140,6 +140,7 @@ float gz=0;
 float mx=0;
 float my=0;
 float mz=0;
+//float orientation_array[12];
 
 // MS5611 variables
 float baroT=0;
@@ -358,12 +359,12 @@ void imuLoop()
 //     pthread_mutex_lock(&spi_mutex);
      imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 //     pthread_mutex_unlock(&spi_mutex);
-// Bench hard iron offsets
+// Bench hard iron offsets - RPiB + NAVIO
 //     mx-=17.0317;
 //     my-=25.7831;
 //     mz+=12.5051;
 
-// Installed hard iron offsets
+// Installed hard iron offsets - RPiB + NAVIO
      mx-=17.9105;
      my-=27.4368;
      mz+=19.0404;
@@ -765,10 +766,25 @@ int main(int argc, char **argv) {
 	if (RPM_active == 1) {
         	rpm=get_rpm(fd);
 	}
-
+/*
+	// Correct IMU/AHRS data for orientation
+	if(sys_orientation==1){
+        	orientation_array={ay, ax, -az, gy, gx, -gz, mx, my, mz, pitch, roll, -yaw};
+        }
+        else if(sys_orientation==2){
+        	orientation_array={-ax, ay, -az, -gx, gy, -gz, -my, mx, mz, -roll, pitch, -yaw};
+        }
+        else if(sys_orientation==3){
+        	orientation_array={-ay, -ax, -az, -gy, -gx, -gz, -mx, -my, mz, -pitch, -pitch, -yaw};
+        }
+        else if(sys_orientation==4){
+        	orientation_array={ax, -ay, -az, gx, -gy, -gz, my, -mx, mz, roll, -pitch, -yaw};
+        }
+*/
         gettimeofday(&tv,NULL);
         t2 = 1000000 * tv.tv_sec + tv.tv_usec;
         dt2 = (t2 - tstart) / 1000000.0;
+        
         // Write data to log file if the gear switch is high
         prev_t3=t3;
         if(gear>1500){
