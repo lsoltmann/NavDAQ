@@ -3,7 +3,7 @@
 #Sample rate (Hz)
 25
 
-#Orientation
+#Orientation (1=0deg, 2=90deg, 3=180deg, 4=270deg, positive rotation to the right, 0deg=USB facing forward)
 1
 
 #Active devices
