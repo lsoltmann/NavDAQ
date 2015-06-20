@@ -424,6 +424,11 @@ int main(int argc, char **argv) {
     	error_flag++;
     	printf("Config file read error!\n");
     };
+    // Echo config file to screen
+    printf("Sampling Frequency: %d\n",dataSampleRate);
+    printf("Devices Active: %d %d %d %d %d %d %d %d %d %d\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
+    printf("Thread Priorities: %d %d %d %d %d\n",gps_priority,ppm_priority,MS5611_priority,MS5805_priority,ahrs_priority);
+    printf("Output to Screen: %d\n\n",OUTPUT_TO_SCREEN);
 
     dataSampleRate_t=1.0/(double)dataSampleRate;
 
@@ -635,6 +640,8 @@ int main(int argc, char **argv) {
     }
     fprintf(logf,"*** This log file contains raw data! ***\n\n");
     fprintf(logf,"%s\n\n",filedate);
+    fprintf(logf,"Sampling Frequency:\n");
+    fprintf(logf,"%d\n\n",dataSampleRate);
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
     fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
