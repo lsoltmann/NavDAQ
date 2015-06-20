@@ -3,6 +3,9 @@
 #Sample rate (Hz)
 25
 
+#Orientation
+1
+
 #Active devices
 #MS5805 MS5611 PPMdecode AHRS GPS MS4515 SSC005D ADC RPM IMU
 1 0 1 1 1 1 1 0 1 1
