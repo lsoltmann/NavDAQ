@@ -1,0 +1,15 @@
+#TEST CONFIGURATION FILE
+
+#Sample rate (Hz)
+25
+
+#Active devices
+#MS5805 MS5611 PPMdecode AHRS GPS MS4515 SSC005D ADC RPM IMU
+1 0 1 1 1 1 1 0 1 1
+
+#Thread priorities
+#GPS PPM MS5611 MS5805 AHRS
+45 30 20 20 33
+
+#Output to screen
+0
