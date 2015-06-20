@@ -19,6 +19,7 @@ all:
 	$(LIBS)/MS4515.cpp \
 	$(LIBS)/PID.cpp \
 	$(LIBS)/SSC005D.cpp \
+	$(LIBS)/readConfig.cpp \
         $(NAVIO)/I2Cdev.cpp -o NavDAQ -lrt -pthread -lpigpio -lwiringPi
 
 clean:
