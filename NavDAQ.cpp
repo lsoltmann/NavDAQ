@@ -373,7 +373,7 @@ int main(int argc, char **argv) {
     if(configs.readfile() != 0){
     	error_flag++;
     	printf("Config file read error!\n\n");
-	//exit(0);
+	exit(0);
     };
     // Echo config file to screen
     printf("Sampling Frequency: %d\n",configs.dataSampleRate);
