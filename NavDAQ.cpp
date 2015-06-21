@@ -368,28 +368,29 @@ int main(int argc, char **argv) {
     memset(&sp, 0, sizeof(sp));
     sp.sched_priority = sched_get_priority_max(SCHED_FIFO);
     sched_setscheduler(0, SCHED_FIFO, &sp);
-    
+
     // Read configuration file data
     if(configs.readfile() != 0){
     	error_flag++;
-    	printf("Config file read error!\n");
+    	printf("Config file read error!\n\n");
+	//exit(0);
     };
     // Echo config file to screen
-    printf("Sampling Frequency: %d\n",dataSampleRate);
-    printf("System Orientation: %d\n",sys_orientation);
-    printf("Devices Active: %d %d %d %d %d %d %d %d %d %d\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
-    printf("Thread Priorities: %d %d %d %d %d\n",gps_priority,ppm_priority,MS5611_priority,MS5805_priority,ahrs_priority);
-    printf("Output to Screen: %d\n\n",OUTPUT_TO_SCREEN);
-    
-    if (dataSampleRate>100){
-    	printf("WARNING! Data sample rate is high!\n\n")
+    printf("Sampling Frequency: %d\n",configs.dataSampleRate);
+    printf("System Orientation: %d\n",configs.sys_orientation);
+    printf("Devices Active: %d %d %d %d %d %d %d %d %d %d\n",configs.IMU_active,configs.AHRS_active,configs.MS5611_active,configs.MS5805_active,configs.MS4515_active,configs.SSC005D_active,configs.RPM_active,configs.PPMdecode_active,configs.GPS_active,configs.ADC_active);
+    printf("Thread Priorities: %d %d %d %d %d\n",configs.gps_priority,configs.ppm_priority,configs.MS5611_priority,configs.MS5805_priority,configs.ahrs_priority);
+    printf("Output to Screen: %d\n\n",configs.OUTPUT_TO_SCREEN);
+
+    if (configs.dataSampleRate>100){
+    	printf("WARNING! Data sample rate is high!\n\n");
     }
-    if (sys_orientation != 1 || sys_orientation != 2 || sys_orientation != 3 || sys_orientation != 4){
-    	printf("System orientation value not valid! Must be either 1,2,3,4\n\n")
+    if (configs.sys_orientation != 1 && configs.sys_orientation != 2 && configs.sys_orientation != 3 && configs.sys_orientation != 4){
+    	printf("System orientation value not valid! Must be either 1,2,3,4\n\n");
     	error_flag++;
     }
 
-    dataSampleRate_t=1.0/(double)dataSampleRate;
+    dataSampleRate_t=1.0/(double)configs.dataSampleRate;
 
     // Setup wiringPi and set ouput pins for MS4515 bank
     wiringPiSetup();
@@ -397,12 +398,12 @@ int main(int argc, char **argv) {
     pinMode(S1, OUTPUT);
 
     // Heart beat count
-    hboffcount=1.5*dataSampleRate; //secs LED off
-    hboncount=0.25*dataSampleRate; //secs LED on
+    hboffcount=1.5*configs.dataSampleRate; //secs LED off
+    hboncount=0.25*configs.dataSampleRate; //secs LED on
 
     // ***************** Device Setups ***********************
     // RPM ******
-    if (RPM_active == 1) {
+    if (configs.RPM_active == 1) {
     	fd = serialOpen ("/dev/ttyAMA0",115200) ;
     	if (fd==-1){
             error_flag++;
@@ -411,19 +412,19 @@ int main(int argc, char **argv) {
     }
 
     // ADC ******
-    if (ADC_active == 1) {
+    if (configs.ADC_active == 1) {
         adc.setMode(ADS1115_MODE_SINGLESHOT);
         adc.setRate(ADS1115_RATE_860);
     }
 
     // BARO ******
     MS5611 baro;
-    if (MS5611_active == 1) {
+    if (configs.MS5611_active == 1) {
     	baro.initialize();
     }
 
     // IMU ******
-    if (AHRS_active == 0) {
+    if (configs.AHRS_active == 0) {
 	imu.initialize();
     }
 
@@ -453,10 +454,10 @@ int main(int argc, char **argv) {
     pthread_t AHRSThread;
     pthread_t GPSThread;
 
-    if (GPS_active==1) {
+    if (configs.GPS_active==1) {
         // GPS thread scheduling
         struct sched_param param_gps;
-        param_gps.sched_priority = gps_priority;
+        param_gps.sched_priority = configs.gps_priority;
         pthread_attr_t attr_gps;
         pthread_attr_init(&attr_gps);
         pthread_attr_setinheritsched(&attr_gps, PTHREAD_EXPLICIT_SCHED);
@@ -471,10 +472,10 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_gps);
     }
 
-    if (PPMdecode_active==1) {
+    if (configs.PPMdecode_active==1) {
         // PPM thread scheduling
         struct sched_param param_ppm;
-        param_ppm.sched_priority = ppm_priority;
+        param_ppm.sched_priority = configs.ppm_priority;
         pthread_attr_t attr_ppm;
         pthread_attr_init(&attr_ppm);
         pthread_attr_setinheritsched(&attr_ppm, PTHREAD_EXPLICIT_SCHED);
@@ -489,10 +490,10 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_ppm);
     }
 
-    if (MS5611_active==1) {
+    if (configs.MS5611_active==1) {
         // MS5611 thread scheduling
         struct sched_param param_baro1;
-        param_baro1.sched_priority = MS5611_priority;
+        param_baro1.sched_priority = configs.MS5611_priority;
         pthread_attr_t attr_baro1;
         pthread_attr_init(&attr_baro1);
         pthread_attr_setinheritsched(&attr_baro1, PTHREAD_EXPLICIT_SCHED);
@@ -507,10 +508,10 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_baro1);
     }
 
-    if (MS5805_active==1) {
+    if (configs.MS5805_active==1) {
         // MS5805 thread scheduling
         struct sched_param param_baro2;
-        param_baro2.sched_priority = MS5805_priority;
+        param_baro2.sched_priority = configs.MS5805_priority;
         pthread_attr_t attr_baro2;
         pthread_attr_init(&attr_baro2);
         pthread_attr_setinheritsched(&attr_baro2, PTHREAD_EXPLICIT_SCHED);
@@ -525,10 +526,10 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_baro2);
     }
 
-    if (AHRS_active==1) {
+    if (configs.AHRS_active==1) {
         // AHRS thread scheduling
         struct sched_param param_ahrs;
-        param_ahrs.sched_priority = ahrs_priority;
+        param_ahrs.sched_priority = configs.ahrs_priority;
         pthread_attr_t attr_ahrs;
         pthread_attr_init(&attr_ahrs);
         pthread_attr_setinheritsched(&attr_ahrs, PTHREAD_EXPLICIT_SCHED);
@@ -599,19 +600,19 @@ int main(int argc, char **argv) {
     fprintf(logf,"*** This log file contains raw data! ***\n\n");
     fprintf(logf,"%s\n\n",filedate);
     fprintf(logf,"Sampling Frequency:\n");
-    fprintf(logf,"%d\n\n",dataSampleRate);
+    fprintf(logf,"%d\n\n",configs.dataSampleRate);
     fprintf(logf,"System Orientation:\n");
-    fprintf(logf,"%d\n\n",sys_orientation);
+    fprintf(logf,"%d\n\n",configs.sys_orientation);
     fprintf(logf,"Devices Active:\n");
     fprintf(logf,"IMU AHRS MS5611 MS5805 MS4515 SSC005D RPM PPM GPS ADC\n");
-    fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",IMU_active,AHRS_active,MS5611_active,MS5805_active,MS4515_active,SSC005D_active,RPM_active,PPMdecode_active,GPS_active,ADC_active);
+    fprintf(logf,"%d %d %d %d %d %d %d %d %d %d\n\n",configs.IMU_active,configs.AHRS_active,configs.MS5611_active,configs.MS5805_active,configs.MS4515_active,configs.SSC005D_active,configs.RPM_active,configs.PPMdecode_active,configs.GPS_active,configs.ADC_active);
     fprintf(logf,"Time Ax Ay Az Gx Gy Gz Mx My Mz Phi Theta Psi BaroTemp BaroPress StaticPress Alpha Beta V RPM Throttle Aileron Elevator Rudder GPSLat GPSLon GPShMSL GPSNorthV GPSEastV GPSDownV GPS2Dspeed GPS3Dspeed GPSCourse GPSStat GPSnSat GPSPDOP GPSAltAcc GPSVelAcc\n");
     fprintf(logf,"sec,g,g,g,deg/s,deg/s,deg/s,microT,microT,microT,deg,deg,deg,degC,mbar,mbar,count,count,count,pulseWidth,usec,usec,usec,usec,deg,deg,ft,ft,ft/s,ft/s,ft/s,ft/s,ft/s,deg,none,none,ft,ft/s\n");
 
     // Sometimes a "Device not opened" error occurs and the magnetometer is reading zero
     // Check to see if magnetometer is reading zero and set errorflag
     usleep(500000);
-    if (IMU_active == 1 || AHRS_active == 1) {
+    if (configs.IMU_active == 1 || configs.AHRS_active == 1) {
         imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
         if(mx==0 & my==0 & mz==0){
             error_flag++;
@@ -664,12 +665,12 @@ int main(int argc, char **argv) {
             pwm.setPWM(GREEN,LEDMIN);
         }
         // READ IMU
-	if (IMU_active == 1 && AHRS_active == 0) {
+	if (configs.IMU_active == 1 && configs.AHRS_active == 0) {
         	imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 	}
 
         // READ ADC
-        if (ADC_active == 1) {
+        if (configs.ADC_active == 1) {
         adc.setMultiplexer(ADS1115_MUX_P0_NG);
         mV0 = adc.getMilliVolts();
         adc.setMultiplexer(ADS1115_MUX_P1_NG);
@@ -681,14 +682,14 @@ int main(int argc, char **argv) {
         }
 
         // READ BAROMETER
-        if (MS5611_active==1) {
+        if (configs.MS5611_active==1) {
             baroT=baro.getTemperature();
             baroP=baro.getPressure();
         }
 
 
         // READ PPM, OUTPUT PWM
-	if (PPMdecode_active == 1) {
+	if (configs.PPMdecode_active == 1) {
     		throttle=channels[0];
         	elevator=channels[2];
         	aileron=channels[1];
@@ -702,16 +703,16 @@ int main(int argc, char **argv) {
 	}
 
         // READ ALPHA, BETA, VELOCITY
-	if (SSC005D_active == 1) {
+	if (configs.SSC005D_active == 1) {
         	V_press=get_diff_press(VEL);
 	}
-        if (MS4515_active == 1) {
+        if (configs.MS4515_active == 1) {
         	alfa_press=get_diff_press(ALFA);
         	beta_press=get_diff_press(BETA);
 	}
 
         // READ RPM
-	if (RPM_active == 1) {
+	if (configs.RPM_active == 1) {
         	rpm=get_rpm(fd);
 	}
 /*
@@ -742,16 +743,16 @@ int main(int argc, char **argv) {
                 gearflag=1;
             }
             pwm.setPWM(BLUE, LEDLOW);
-            if(sys_orientation==1){
+            if(configs.sys_orientation==1){
             	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ay, ax, -az, gy, gx, -gz, mx, my, mz, pitch, roll, -yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
             }
-            else if(sys_orientation==2){
+            else if(configs.sys_orientation==2){
             	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, -ax, ay, -az, -gx, gy, -gz, -my, mx, mz, -roll, pitch, -yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
             }
-            else if(sys_orientation==3){
+            else if(configs.sys_orientation==3){
             	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, -ay, -ax, -az, -gy, -gx, -gz, -mx, -my, mz, -pitch, -pitch, -yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
             }
-            else if(sys_orientation==4){
+            else if(configs.sys_orientation==4){
             	fprintf(logf,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %d %d %4.f %4.f %4.f %4.f %.6f %.6f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %d %d %.2f %.2f %.2f\n",dt2, ax, -ay, -az, gx, -gy, -gz, my, -mx, mz, roll, -pitch, -yaw, baroT, baroP, static_pressure, alfa_press, beta_press, V_press, rpm, throttle, aileron, elevator, rudder, gps.gps_lat, gps.gps_lon, gps.gps_hmsl, gps.gps_N, gps.gps_E, gps.gps_D, gps.gps_2D, gps.gps_3D, gps.gps_crs, gps.gps_stat, gps.gps_nsat, gps.gps_pdop, gps.gps_altacc, gps.gps_velacc);
             }
             fflush(logf);
@@ -767,7 +768,7 @@ int main(int argc, char **argv) {
             exitflag=1;
         }
 
-        if (OUTPUT_TO_SCREEN==1) {
+        if (configs.OUTPUT_TO_SCREEN==1) {
             printf("Barometer Temp (C): %.1f\n",baroT);
             printf("Barometer Press (mbar): %.1f\n", baroP);
             printf("Static Pressure (PSF): %.1f\n",static_pressure);
@@ -819,7 +820,7 @@ int main(int argc, char **argv) {
 	    usleep(nextloopt);
         }
 
-	if (OUTPUT_TO_SCREEN==1) {
+	if (configs.OUTPUT_TO_SCREEN==1) {
             gettimeofday(&tv,NULL);
             t4 = 1000000 * tv.tv_sec + tv.tv_usec;
             dt4 = (t4 - t1) / 1000000.0;
