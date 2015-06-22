@@ -55,7 +55,7 @@ Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added
 using namespace Navio;
 using namespace std;
 
-/*
+/*  THESE PARAMETERS ARE NOW SET USING A SEPARATE CONFIGURATION FILE!
 // *!*!*!*!*!*!*!*!*!*! System and Data Options *!*!*!*!*!*!*!*!*!*!*!
 int dataSampleRate=25; // Hertz
 
@@ -470,6 +470,7 @@ int main(int argc, char **argv) {
             printf("GPS thread error!\n");
         }
         pthread_attr_destroy(&attr_gps);
+        usleep(250000);
     }
 
     if (configs.PPMdecode_active==1) {
@@ -488,6 +489,7 @@ int main(int argc, char **argv) {
             printf("PPM thread error!\n");
         }
         pthread_attr_destroy(&attr_ppm);
+        usleep(250000);
     }
 
     if (configs.MS5611_active==1) {
@@ -506,6 +508,7 @@ int main(int argc, char **argv) {
             printf("MS5611 thread error!\n");
         }
         pthread_attr_destroy(&attr_baro1);
+        usleep(250000);
     }
 
     if (configs.MS5805_active==1) {
@@ -524,6 +527,7 @@ int main(int argc, char **argv) {
             printf("MS5805 thread error!\n");
         }
         pthread_attr_destroy(&attr_baro2);
+        usleep(250000);
     }
 
     if (configs.AHRS_active==1) {
@@ -542,6 +546,7 @@ int main(int argc, char **argv) {
             printf("AHRS thread error!\n");
         }
         pthread_attr_destroy(&attr_ahrs);
+        usleep(250000);
     }
 
  /*   if (GPS_active==1) {
