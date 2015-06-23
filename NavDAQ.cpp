@@ -25,6 +25,7 @@ Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSp
 Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
 Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
 Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
+Rev N - 23 Jun 2015 - Added second PPM encoder
 */
 
 #include <stdio.h>
@@ -55,32 +56,7 @@ Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added
 using namespace Navio;
 using namespace std;
 
-/*  THESE PARAMETERS ARE NOW SET USING A SEPARATE CONFIGURATION FILE!
-// *!*!*!*!*!*!*!*!*!*! System and Data Options *!*!*!*!*!*!*!*!*!*!*!
-int dataSampleRate=25; // Hertz
-
-int MS5805_active=1; // 1 = yes, 0 = no
-int MS5611_active=0;
-int PPMdecode_active=1;
-int AHRS_active=1;
-int GPS_active=1;
-int MS4515_active=1;
-int SSC005D_active=1;
-int ADC_active=0;
-int RPM_active=1;
-int IMU_active=1;
-
-int gps_priority=45;
-int ppm_priority=30;
-int MS5611_priority=20;
-int MS5805_priority=20;
-int ahrs_priority=33;
-
-int OUTPUT_TO_SCREEN=0;
-//pthread_mutex_t i2c_mutex=PTHREAD_MUTEX_INITIALIZER;
-//pthread_mutex_t spi_mutex=PTHREAD_MUTEX_INITIALIZER;
-// *!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!
-*/
+/*
 //================================ PPM Decoder and Servo Setup  =====================================
 unsigned int samplingRate      = 5;      // 1 microsecond (can be 1,2,4,5,10)
 unsigned int ppmInputGpio      = 4;      // PPM input on Navio's 2.54 header
@@ -90,6 +66,17 @@ unsigned int servoFrequency    = 50;     // Servo control frequency
 
 // **** This data is set specifically for the RMILEC high-precision PWM/PPM/SBus Signal Converter V2
 // **** R8 has been removed on the NAVIO, 3.3V PPM ONLY!
+// This encoder only appears to work with original NAVIO
+*/
+//================================ PPM Decoder and Servo Setup  =====================================
+unsigned int samplingRate      = 5;      // 1 microsecond (can be 1,2,4,5,10)
+unsigned int ppmInputGpio      = 4;      // PPM input on Navio's 2.54 header
+unsigned int ppmSyncLength     = 10500;   // Length of PPM sync pause
+unsigned int ppmChannelsNumber = 8;      // Number of channels packed in PPM
+unsigned int servoFrequency    = 50;     // Servo control frequency
+
+// **** This data is set specifically for the Geeetech PPM encoder (tested with NAVIO+)
+
 
 MS5805 ms5805;
 MS4515 ms4515;
@@ -103,7 +90,8 @@ readConfig configs;
 
 //============================ Variable Setup  ==================================
 // PPM variables
-float channels[5], throttle, elevator, aileron, rudder, gear;
+float channels[8]; // <- Geeetech = 8, RMILEC = 5
+float throttle, elevator, aileron, rudder, gear;
 unsigned int currentChannel = 0;
 unsigned int previousTick;
 unsigned int deltaTime;
