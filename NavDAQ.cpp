@@ -25,7 +25,7 @@ Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSp
 Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
 Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
 Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
-Rev N - 23 Jun 2015 - Added second PPM encoder
+Rev N - 23 Jun 2015 - Added second PPM encoder, updated installed hard iron calibrations for new system (+)
 */
 
 #include <stdio.h>
@@ -304,15 +304,20 @@ void imuLoop()
 	ahrs_dt = (currenttime - previoustime) / 1000000.0;
 
 	imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-// Bench hard iron offsets - RPiB + NAVIO
+// Bench hard iron offsets - RPiB & NAVIO
 //     mx-=17.0317;
 //     my-=25.7831;
 //     mz+=12.5051;
 
-// Installed hard iron offsets - RPiB + NAVIO
-     	mx-=17.9105;
-     	my-=27.4368;
-     	mz+=19.0404;
+// Installed hard iron offsets - RPiB & NAVIO
+//     	mx-=17.9105;
+//     	my-=27.4368;
+//     	mz+=19.0404;
+     	
+// Installed hard iron offsets - RPiB+ & NAVIO+
+     	mx-=55.0491;
+     	my+=183.9702;
+     	mz+=10.7199;     	
      	ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, ahrs_dt);
 	ahrs.getEuler(&roll, &pitch, &yaw);
 
@@ -826,31 +831,31 @@ int main(int argc, char **argv) {
     serialClose(fd);
     pwm.setPWM(GREEN, LEDMIN);
     pwm.setPWM(BLUE, LEDMIN);
-    pwm.setPWM(RED, LEDMAX);
+    pwm.setPWM(RED, LEDLOW);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
     pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
     pwm.setPWM(BLUE, LEDMIN);
-    pwm.setPWM(RED, LEDMAX);
+    pwm.setPWM(RED, LEDLOW);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
     pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
     pwm.setPWM(BLUE, LEDMIN);
-    pwm.setPWM(RED, LEDMAX);
+    pwm.setPWM(RED, LEDLOW);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
     pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
     pwm.setPWM(BLUE, LEDMIN);
-    pwm.setPWM(RED, LEDMAX);
+    pwm.setPWM(RED, LEDLOW);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
     pwm.setPWM(BLUE, LEDMAX);
     usleep(100000);
     pwm.setPWM(BLUE, LEDMIN);
-    pwm.setPWM(RED, LEDMAX);
+    pwm.setPWM(RED, LEDLOW);
     usleep(100000);
     pwm.setPWM(RED, LEDMIN);
     return 0;
