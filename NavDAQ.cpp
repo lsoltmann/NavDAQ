@@ -315,9 +315,9 @@ void imuLoop()
 //     	mz+=19.0404;
      	
 // Installed hard iron offsets - RPiB+ & NAVIO+
-     	mx-=55.0491;
-     	my+=183.9702;
-     	mz+=10.7199;     	
+     	mx-=37.4836;
+     	my+=212.7862;
+     	mz-=8.0719;     	
      	ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, ahrs_dt);
 	ahrs.getEuler(&roll, &pitch, &yaw);
 
