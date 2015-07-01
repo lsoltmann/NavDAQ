@@ -69,7 +69,7 @@ unsigned int servoFrequency    = 50;     // Servo control frequency
 // This encoder only appears to work with original NAVIO
 */
 //================================ PPM Decoder and Servo Setup  =====================================
-unsigned int samplingRate      = 5;      // 1 microsecond (can be 1,2,4,5,10)
+unsigned int samplingRate      = 2;      // 1 microsecond (can be 1,2,4,5,10)
 unsigned int ppmInputGpio      = 4;      // PPM input on Navio's 2.54 header
 unsigned int ppmSyncLength     = 10500;   // Length of PPM sync pause
 unsigned int ppmChannelsNumber = 8;      // Number of channels packed in PPM
@@ -243,10 +243,11 @@ int get_rpm(int fd){
 		}
 	}
 	rpmflag=1;
+	int b2=serialGetchar(fd) ;
 	int b1=serialGetchar(fd) ;
 	int b0=serialGetchar(fd) ;
 	serialFlush(fd) ;
-	int pw = b0+(b1<<8);
+	int pw = b0+(b1<<8)+(b2<<16);
     return pw;
 }
 
@@ -313,11 +314,11 @@ void imuLoop()
 //     	mx-=17.9105;
 //     	my-=27.4368;
 //     	mz+=19.0404;
-     	
+
 // Installed hard iron offsets - RPiB+ & NAVIO+
      	mx+=37.4836;
      	my-=212.7862;
-     	mz+=8.0719;     	
+     	mz+=8.0719;
      	ahrs.update(ax, ay, az, gx*0.0175, gy*0.0175, gz*0.0175, my, mx, -mz, ahrs_dt);
 	ahrs.getEuler(&roll, &pitch, &yaw);
 
