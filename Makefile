@@ -20,6 +20,7 @@ all:
 	$(LIBS)/PID.cpp \
 	$(LIBS)/SSC005D.cpp \
 	$(LIBS)/readConfig.cpp \
+	$(LIBS)/wifiCom.cpp \
         $(NAVIO)/I2Cdev.cpp -o NavDAQ -lrt -pthread -lpigpio -lwiringPi
 
 clean:
