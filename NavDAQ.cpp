@@ -52,6 +52,7 @@ Revision History
 #include "/home/pi/Libraries/UbloxGPS.h"
 #include "/home/pi/Libraries/SSC005D.h"
 #include "/home/pi/Libraries/readConfig.h"
+#include "/home/pi/Libraries/wifiCom.h"
 
 using namespace Navio;
 using namespace std;
