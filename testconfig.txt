@@ -11,8 +11,8 @@
 1 0 1 1 1 1 1 0 1 1
 
 #Thread priorities
-#GPS PPM MS5611 MS5805 AHRS
-45 30 20 20 33
+#GPS PPM MS5611 MS5805 AHRS Telem
+45 30 20 20 33 10
 
 #Output to screen
 0
