@@ -88,7 +88,7 @@ Ublox gps;
 PCA9685 pwm;
 HWSSC arspd;
 readConfig configs;
-COMMS link;
+COMMS Tlink;
 
 //============================ Variable Setup  ==================================
 // PPM variables
@@ -366,7 +366,7 @@ void * telem_Thread(void *arg){
     gcs_ip_addr[1]=configs.ip2;
     gcs_ip_addr[2]=configs.ip3;
     gcs_ip_addr[3]=configs.ip4;
-    if (link.openConnection(configs.udpport,int gcs_ip_addr[4]) != 0){
+    if (Tlink.openConnection(configs.udpport,gcs_ip_addr) != 0){
 	error_flag++;
 	printf("Telemetry link error!\n");
     }
@@ -374,7 +374,7 @@ void * telem_Thread(void *arg){
     	TMessage[0]=V_press;
     	TMessage[1]=(int)gps.gps_hmsl;
     	TMessage[2]=(int)gps.gps_D;
-    	link.sendData(unsigned char TMessage[3]);
+    	Tlink.sendData(TMessage);
     	usleep(500000);
     }
 }
