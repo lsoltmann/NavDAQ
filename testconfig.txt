@@ -20,5 +20,5 @@
 #Telemetry active
 1
 
-#Ground station IP
-10.3.4.7
+#Ground station IP : UDP port
+10.3.4.7:35007
