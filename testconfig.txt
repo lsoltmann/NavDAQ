@@ -16,3 +16,9 @@
 
 #Output to screen
 0
+
+#Telemetry active
+1
+
+#Ground station IP
+10.3.4.7
