@@ -26,6 +26,7 @@ Revision History
 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
 19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
 23 Jun 2015 - Added second PPM encoder, updated installed hard iron calibrations for new system (+)
+10 Jul 2015 - Added telemetry option
 */
 
 #include <stdio.h>
@@ -161,6 +162,10 @@ float mindt = 0.01;
 unsigned long previoustime, currenttime;
 float dtsumm = 0;
 int isFirst = 1;
+
+// Telemetry variables
+unsigned char TMessage[3];
+int gcs_ip_addr[4];
 
 #define RC1 3
 #define RC2 4
@@ -356,17 +361,22 @@ void * GPS_Thread(void *arg){
 
 // ============================== Telemetry Thread ==============================
 void * telem_Thread(void *arg){
-    if (link.openConnection(configs.port) != 0){
+    gcs_ip_addr[0]=configs.ip1;
+    gcs_ip_addr[1]=configs.ip2;
+    gcs_ip_addr[2]=configs.ip3;
+    gcs_ip_addr[3]=configs.ip4;
+    if (link.openConnection(configs.udpport,int gcs_ip_addr[4]) != 0){
 	error_flag++;
 	printf("Telemetry link error!\n");
     }
     while(1){
-    	link.sendData(TMessage);
-    	sleep(1);
+    	TMessage[0]=V_press;
+    	TMessage[1]=(int)gps.gps_hmsl;
+    	TMessage[2]=(int)gps.gps_D;
+    	link.sendData(unsigned char TMessage[3]);
+    	usleep(500000);
     }
 }
-
-// TMessage definition, ip array into function
 
 // ################################### MAIN SCRIPT ##################################
 int main(int argc, char **argv) {
@@ -815,7 +825,7 @@ int main(int argc, char **argv) {
             printf("GPS NV, EV, DV (ft/s): %.2f %.2f %.2f\n",gps.gps_N,gps.gps_E,gps.gps_D);
             printf("GPS speed 2D 3D (ft/s): %.2f %.2f\n",gps.gps_2D,gps.gps_3D);
             printf("GPS course (deg): %.2f\n",gps.gps_crs);
-            printf("GPS height AGL MSL (ft): %.2f %.2f\n",gps.gps_h,gps.gps_hmsl);
+            printf("GPS height MSL (ft): %.2f\n",gps.gps_hmsl);
             printf("GPS status, nSat: %d %d\n",gps.gps_stat,gps.gps_nsat);
             printf("GPS PDOP, altAcc, velAcc: %.2f %.2f %.2f\n",gps.gps_pdop,gps.gps_altacc,gps.gps_velacc);
             printf("THR: %4.f AIL: %4.f ELEV: %4.f RUD: %4.f\n",throttle, aileron, elevator, rudder);
