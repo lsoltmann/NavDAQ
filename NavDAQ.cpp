@@ -9,23 +9,23 @@ Code from:
 		http://www.emlid.com
 
 Revision History
-Rev A - 17 Jan 2015 - Created and debugged
-Rev B - 30 Jan 2015 - Program split into different versions to cut out what is not needed for the current test
+17 Jan 2015 - Created and debugged
+30 Jan 2015 - Program split into different versions to cut out what is not needed for the current test
                      - This version records the raw data only and will require post processing after download
-Rev C - 11 Feb 2015 - Added MS5805 code
-		       - Added heartbeat
-		       - General improvements and clean up
-Rev D - 13 Feb 2015 - Added check on magnetomer readings to make sure 'device opened error' is caught
-Rev E - 17 Feb 2015 - Added 20Hz LPF to gyro and accel
-Rev F - 24 Feb 2015 - Added AHRS code and thread
-Rev G - 10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard iron calibration
-Rev H - 26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
-Rev I - 04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
-Rev J - 21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
-Rev K - 09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
-Rev L - 27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
-Rev M - 19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
-Rev N - 23 Jun 2015 - Added second PPM encoder, updated installed hard iron calibrations for new system (+)
+11 Feb 2015 - Added MS5805 code
+		     - Added heartbeat
+		     - General improvements and clean up
+13 Feb 2015 - Added check on magnetomer readings to make sure 'device opened error' is caught
+17 Feb 2015 - Added 20Hz LPF to gyro and accel
+24 Feb 2015 - Added AHRS code and thread
+10 Mar 2015 - Renamed NavDAQ_raw_AHRS to NavDAQ2, added installed hard iron calibration
+26 Mar 2015 - Removed LPF on accel and gyro, increased sigfigs on baro and static transducer, chnaged loop time to run at true 50Hz
+04 Apr 2015 - Upgraded to NavDAQ3, GPS thread added, display ouput modified, change LED to reflect GPS status
+21 Apr 2015 - Hardcoded C6 for MS5805 from coeff data provided by MeasSpec
+09 May 2015 - Major overhaul of code due to excessive CPU usage causing lag in data, specifically GPS (turned out not to be the root cause)
+27 May 2015 - GPS switched to new library, NMEA messages disabled, GPS lag appears to be gone
+19 Jun 2015 - Modified log file to reflect changes to GPS library, added configuration file reader code
+23 Jun 2015 - Added second PPM encoder, updated installed hard iron calibrations for new system (+)
 */
 
 #include <stdio.h>
@@ -39,7 +39,6 @@ Rev N - 23 Jun 2015 - Added second PPM encoder, updated installed hard iron cali
 #include "/home/pi/Navio/C++/Navio/MS5611.h"
 #include "/home/pi/Navio/C++/Navio/ADS1115.h"
 #include "/home/pi/Navio/C++/Navio/MPU9250.h"
-//#include "/home/pi/Navio/C++/Navio/Ublox.h"
 #include "/home/pi/Navio/C++/Navio/PCA9685.h"
 #include "/home/pi/Navio/C++/Examples/AHRS/AHRS.hpp"
 #include "/home/pi/Navio/C++/Navio/gpio.h"
@@ -87,6 +86,7 @@ Ublox gps;
 PCA9685 pwm;
 HWSSC arspd;
 readConfig configs;
+COMMS link;
 
 //============================ Variable Setup  ==================================
 // PPM variables
@@ -354,6 +354,19 @@ void * GPS_Thread(void *arg){
     gps.getMessages();
 }
 
+// ============================== Telemetry Thread ==============================
+void * telem_Thread(void *arg){
+    if (link.openConnection(configs.port) != 0){
+	error_flag++;
+	printf("Telemetry link error!\n");
+    }
+    while(1){
+    	link.sendData(TMessage);
+    	sleep(1);
+    }
+}
+
+// TMessage definition, ip array into function
 
 // ################################### MAIN SCRIPT ##################################
 int main(int argc, char **argv) {
@@ -373,8 +386,10 @@ int main(int argc, char **argv) {
     printf("Sampling Frequency: %d\n",configs.dataSampleRate);
     printf("System Orientation: %d\n",configs.sys_orientation);
     printf("Devices Active: %d %d %d %d %d %d %d %d %d %d\n",configs.IMU_active,configs.AHRS_active,configs.MS5611_active,configs.MS5805_active,configs.MS4515_active,configs.SSC005D_active,configs.RPM_active,configs.PPMdecode_active,configs.GPS_active,configs.ADC_active);
-    printf("Thread Priorities: %d %d %d %d %d\n",configs.gps_priority,configs.ppm_priority,configs.MS5611_priority,configs.MS5805_priority,configs.ahrs_priority);
-    printf("Output to Screen: %d\n\n",configs.OUTPUT_TO_SCREEN);
+    printf("Telemetry Active: %d\n",configs.telem_active);
+    printf("Ground station IP: %d.%d.%d.%d\n",configs.ip1,configs.ip2,configs.ip3,configs.ip4);
+    printf("Thread Priorities: %d %d %d %d %d %d\n",configs.gps_priority,configs.ppm_priority,configs.MS5611_priority,configs.MS5805_priority,configs.ahrs_priority,configs.telem_priority);
+    printf("Output to Screen: %d\n",configs.OUTPUT_TO_SCREEN);
 
     if (configs.dataSampleRate>100){
     	printf("WARNING! Data sample rate is high!\n\n");
@@ -442,13 +457,9 @@ int main(int argc, char **argv) {
     pwm.setPWM(BLUE, LEDMIN);
 
     // Create Threads ********************************************
-    pthread_t PPMThread;
-    pthread_t BaroThread;
-    pthread_t MS5805Thread;
-    pthread_t AHRSThread;
-    pthread_t GPSThread;
 
     if (configs.GPS_active==1) {
+    	pthread_t GPSThread;
         // GPS thread scheduling
         struct sched_param param_gps;
         param_gps.sched_priority = configs.gps_priority;
@@ -468,6 +479,7 @@ int main(int argc, char **argv) {
     }
 
     if (configs.PPMdecode_active==1) {
+    	pthread_t PPMThread;
         // PPM thread scheduling
         struct sched_param param_ppm;
         param_ppm.sched_priority = configs.ppm_priority;
@@ -487,6 +499,7 @@ int main(int argc, char **argv) {
     }
 
     if (configs.MS5611_active==1) {
+    	pthread_t BaroThread;
         // MS5611 thread scheduling
         struct sched_param param_baro1;
         param_baro1.sched_priority = configs.MS5611_priority;
@@ -506,6 +519,7 @@ int main(int argc, char **argv) {
     }
 
     if (configs.MS5805_active==1) {
+    	pthread_t MS5805Thread;
         // MS5805 thread scheduling
         struct sched_param param_baro2;
         param_baro2.sched_priority = configs.MS5805_priority;
@@ -525,6 +539,7 @@ int main(int argc, char **argv) {
     }
 
     if (configs.AHRS_active==1) {
+    	pthread_t AHRSThread;
         // AHRS thread scheduling
         struct sched_param param_ahrs;
         param_ahrs.sched_priority = configs.ahrs_priority;
@@ -542,6 +557,26 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_ahrs);
         usleep(250000);
     }
+    
+    if (configs.telem_active==1) {
+    	pthread_t telemThread;
+        // Telemetry thread scheduling
+        struct sched_param param_telem;
+        param_telem.sched_priority = configs.telem_priority;
+        pthread_attr_t attr_telem;
+        pthread_attr_init(&attr_telem);
+        pthread_attr_setinheritsched(&attr_telem, PTHREAD_EXPLICIT_SCHED);
+        pthread_attr_setschedpolicy(&attr_telem, SCHED_FIFO);
+        pthread_attr_setschedparam(&attr_telem, &param_telem);
+
+    if(pthread_create(&telemThread, &attr_telem, telem_Thread, (void *)arg) != 0)
+        {
+            error_flag++;
+            printf("Telemetry thread error!\n");
+        }
+        pthread_attr_destroy(&attr_telem);
+        usleep(250000);
+    }    
 
  /*   if (GPS_active==1) {
         if(pthread_create(&GPSThread, NULL, GPS_Thread, (void *)arg) != 0)
