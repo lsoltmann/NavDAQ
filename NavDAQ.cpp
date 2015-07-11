@@ -165,7 +165,7 @@ float dtsumm = 0;
 int isFirst = 1;
 
 // Telemetry variables
-unsigned char TMessage[3];
+int TMessage[3];
 int gcs_ip_addr[4];
 
 #define RC1 3
