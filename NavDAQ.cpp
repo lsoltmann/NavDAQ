@@ -165,7 +165,7 @@ float dtsumm = 0;
 int isFirst = 1;
 
 // Telemetry variables
-int TMessage[3];
+int TMessage[6];
 int gcs_ip_addr[4];
 
 #define RC1 3
@@ -373,8 +373,11 @@ void * telem_Thread(void *arg){
     while(1){
     	TMessage[0]=V_press;
     	TMessage[1]=(int)gps.gps_hmsl;
-    	TMessage[2]=(int)gps.gps_D;
-    	Tlink.sendData(TMessage);
+    	TMessage[2]=(int)gps.gps_N*100; //To increase resolution
+	TMessage[3]=(int)gps.gps_E*100;
+	TMessage[4]=(int)gps.gps_D*100;
+	TMessage[5]=(int)gps.gps_crs;
+    	Tlink.sendData(TMessage,6,2);
     	usleep(500000);
     }
 }
@@ -568,7 +571,7 @@ int main(int argc, char **argv) {
         pthread_attr_destroy(&attr_ahrs);
         usleep(250000);
     }
-    
+
     if (configs.telem_active==1) {
     	pthread_t telemThread;
         // Telemetry thread scheduling
@@ -587,7 +590,7 @@ int main(int argc, char **argv) {
         }
         pthread_attr_destroy(&attr_telem);
         usleep(250000);
-    }    
+    }
 
  /*   if (GPS_active==1) {
         if(pthread_create(&GPSThread, NULL, GPS_Thread, (void *)arg) != 0)
@@ -778,7 +781,7 @@ int main(int argc, char **argv) {
         gettimeofday(&tv,NULL);
         t2 = 1000000 * tv.tv_sec + tv.tv_usec;
         dt2 = (t2 - tstart) / 1000000.0;
-        
+
         // Write data to log file if the gear switch is high
         prev_t3=t3;
         if(gear>1500){
